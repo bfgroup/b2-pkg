@@ -1,0 +1,126 @@
+#|
+Copyright 2020 René Ferdinand Rivera Morell
+Distributed under the Boost Software License, Version 1.0.
+(See accompanying file LICENSE.txt or http://www.boost.org/LICENSE_1_0.txt)
+|#
+
+import common ;
+import feature ;
+import modules ;
+import os ;
+import path ;
+import stage ;
+
+project
+	: requirements
+		<address-model>64
+		<variant>release
+		<runtime-link>static
+	;
+
+# The WiX Toolset location.
+WiX = [ GLOB [ os.environ "ProgramFiles(x86)" ] : "WiX Toolset v*" ] ;
+
+# The B2 source tree.
+B2ROOT = [ MATCH ^--b2root=(.*) : [ modules.peek : ARGV ] ] ;
+
+# Generic WiX tools.
+
+feature.feature wix-heat-group : : free ;
+feature.feature wix-heat-dir : : free path ;
+feature.feature wix-heat-dir-id : : free ;
+
+rule wix.heat ( target * : source * : properties * )
+{
+	_ on $(target) = " " ;
+	HEAT on $(target) = "$(WiX)/bin/heat.exe" ;
+	# -cg <ComponentGroupName>  component group name (cannot contain spaces e.g -cg MyComponentGroup)
+	HEAT_GROUP on $(target) = [ feature.get-values <wix-heat-group> : $(properties) ] ;
+	# dir      harvest a directory
+	HEAT_DIR on $(target) = [ path.native [ feature.get-values <wix-heat-dir> : $(properties) ] ] ;
+	# -dr <DirectoryName>  directory reference to root directories (cannot contain spaces e.g. -dr MyAppDirRef)
+	HEAT_DIR_ID on $(target) = [ feature.get-values <wix-heat-dir-id> : $(properties) ] ;
+}
+
+actions wix.heat
+{
+	"$(HEAT)" dir "$(HEAT_DIR[1])" -cg$(_)$(HEAT_GROUP[1]) -out "$(<[1])" -gg -srd -dr$(_)$(HEAT_DIR_ID[1])
+}
+
+rule wix.compile ( target * : source * : properties * )
+{
+	_ on $(target) = " " ;
+	CANDLE on $(target) = "$(WiX)/bin/candle.exe" ;
+	# -d<name>[=<value>]  define a parameter for the preprocessor
+	DEFINE on $(target) = [ feature.get-values <define> : $(properties) ] ;
+}
+
+actions wix.compile
+{
+	"$(CANDLE)" -nologo -arch x64 -o "$(<)" "$(>)" "-d$(DEFINE)"
+}
+
+feature.feature wix-binder-path : : free path ;
+
+rule wix.link ( target * : source * : properties * )
+{
+	_ on $(target) = " " ;
+	LIGHT on $(target) = "$(WiX)/bin/light.exe" ;
+	# -b <path> specify a binder path to locate all files
+	#           (default: current directory)
+	#           prefix the path with 'name=' where 'name' is the name of your
+	#           named bindpath.
+	local binder-paths = [ feature.get-values <wix-binder-path> : $(properties) ] ;
+	for local path in $(binder-paths)
+	{
+		BINDER_PATH on $(target) += [ path.native $(path) ] ;
+	}
+}
+
+actions wix.link
+{
+	"$(LIGHT)" -nologo -b$(_)"$(BINDER_PATH)" -o "$(<)" "$(>)"
+}
+
+# Build and pseudo install fresh B2 package to package up.
+
+path-constant BUILDDIR : ../.build/windows/stage ;
+
+use-project /b2 : $(B2ROOT) ;
+
+alias b2_exe
+	:	/b2//b2-engine/<b2-install-layout>portable/<install-prefix>$(BUILDDIR)/b2_exe
+	;
+
+# stage.install b2_exe
+# 	: /b2//b2/<variant>release
+# 	: <location>$(BUILDDIR) ;
+
+alias b2_files
+	:	/b2//b2-core/<b2-install-layout>portable/<install-prefix>$(BUILDDIR)/b2_files
+	;
+
+# Generate WiX files database.
+
+make b2_files.wxs
+	# :	$(BUILDDIR)/b2_files/.b2/build-system.jam
+	:	b2_files
+	:	@wix.heat
+	:	<wix-heat-group>B2Files
+		<wix-heat-dir>$(BUILDDIR)/b2_files
+		<wix-heat-dir-id>INSTALLDIR
+	;
+
+# Compile the WiX installer definitions.
+
+make b2_files.wixobj : b2_files.wxs : @wix.compile ;
+make b2.wixobj : b2.wxs : @wix.compile : <dependency>b2_exe <define>b2version=4.3.0 ;
+
+# Build the installer package.
+
+make b2.msi
+	:	b2.wixobj b2_files.wixobj
+	:	@wix.link
+	:	<wix-binder-path>$(BUILDDIR)/b2_exe
+		<wix-binder-path>$(BUILDDIR)/b2_files
+	;

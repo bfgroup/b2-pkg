@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
+	<Product
+		Name='B2'
+		Manufacturer='Build Frameworks Group'
+		Id='50E15E5A-6B15-46D7-B0EB-48EADBC3682F' 
+		UpgradeCode='52F31496-5396-4537-BA46-0BAF111F97BD'
+		Language='1033'
+		Codepage='1252'
+		Version='$(var.b2version)'>
+		<Package Id='*'
+			Keywords='Installer'
+			Description='B2 Installer'
+			Comments='Copyright 2020 René Ferdinand Rivera Morell'
+			Manufacturer='BFGroup'
+			InstallerVersion='200'
+			Languages='1033'
+			Compressed='yes'
+			SummaryCodepage='1252' />
+		<Property Id="ARPHELPLINK" Value="https://boostorg.github.io/build/" />
+		<Property Id="ARPURLINFOABOUT" Value="https://boostorg.github.io/build/" />
+		<Property Id="ARPNOMODIFY" Value="1" />
+		<Media Id='1' Cabinet='b2.cab' EmbedCab='yes' />
+		<Directory Id='TARGETDIR' Name='SourceDir'>
+			<Directory Id='ProgramFiles64Folder' Name='PFiles'>
+				<Directory Id='BFGroup' Name='BFGroup'>
+					<Directory Id='INSTALLDIR' Name='B2'>
+						<Component Id='B2' Guid='90C9A253-52CF-4CA6-B887-C8EA590F4314'>
+							<File Id='B2EXE' Name='b2.exe' DiskId='1' Source='b2.exe' KeyPath='yes' />
+							<Environment Id='B2PATH' Name='PATH' Value='[INSTALLDIR]' Permanent='no' Part='last' Action='set' System='yes' />
+						</Component>
+					</Directory>
+				</Directory>
+			</Directory>
+			<Directory Id="ProgramMenuFolder" Name="Programs" />
+			<Directory Id="DesktopFolder" Name="Desktop" />
+		</Directory>
+		<Feature Id='Complete' Level='1'>
+			<ComponentRef Id='B2' />
+			<ComponentGroupRef Id='B2Files' />
+		</Feature>
+	</Product>
+</Wix>
+<!--
+Copyright 2020 René Ferdinand Rivera Morell
+Distributed under the Boost Software License, Version 1.0.
+(See accompanying file LICENSE.txt or http://www.boost.org/LICENSE_1_0.txt)
+-->
