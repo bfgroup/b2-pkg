@@ -75,14 +75,21 @@ rule wix.link ( target * : source * : properties * )
 	{
 		BINDER_PATH on $(target) += [ path.native $(path) ] ;
 	}
+	FLAGS on $(target) = [ feature.get-values <flags> : $(properties) ] ;
 }
 
 actions wix.link
 {
-	"$(LIGHT)" -nologo -b$(_)"$(BINDER_PATH)" -o "$(<)" "$(>)"
+	"$(LIGHT)" -nologo $(FLAGS) -b$(_)"$(BINDER_PATH)" -o "$(<)" "$(>)"
 }
 
 # Build and pseudo install fresh B2 package to package up.
+
+local B2VERSION = [ FILE_OPEN $(B2ROOT)/src/engine/patchlevel.h : t ] ;
+B2VERSION = [ MATCH "MAJOR ([0-9]+)" "MINOR ([0-9]+)" "PATCH ([0-9]+)" : $(B2VERSION) ] ;
+B2VERSION = $(B2VERSION:J=.) ;
+
+path-constant HERE : . ;
 
 path-constant BUILDDIR : ../.build/windows/stage ;
 
@@ -103,7 +110,6 @@ alias b2_files
 # Generate WiX files database.
 
 make b2_files.wxs
-	# :	$(BUILDDIR)/b2_files/.b2/build-system.jam
 	:	b2_files
 	:	@wix.heat
 	:	<wix-heat-group>B2Files
@@ -114,13 +120,19 @@ make b2_files.wxs
 # Compile the WiX installer definitions.
 
 make b2_files.wixobj : b2_files.wxs : @wix.compile ;
-make b2.wixobj : b2.wxs : @wix.compile : <dependency>b2_exe <define>b2version=4.3.0 ;
+make b2.wixobj : b2.wxs : @wix.compile : <dependency>b2_exe <define>b2version=$(B2VERSION) ;
 
 # Build the installer package.
 
-make b2.msi
+make b2-$(B2VERSION).msi
 	:	b2.wixobj b2_files.wixobj
 	:	@wix.link
 	:	<wix-binder-path>$(BUILDDIR)/b2_exe
 		<wix-binder-path>$(BUILDDIR)/b2_files
+		<flags>"-ext WixUIExtension"
+		<flags>"-cultures:en-us"
+		<flags>"-loc \"$(HERE)/b2_en-us.wxl\""
+		<dependency>banner_top.bmp
+		<dependency>dialog_bkg.bmp
+		<dependency>b2_en-us.wxl
 	;

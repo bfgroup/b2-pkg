@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WixLocalization Culture="en-US" Codepage="1252" xmlns="http://schemas.microsoft.com/wix/2006/localization">
+    <!-- Customize the install scope strings to not mention changing install location as we don't support that. -->
+    <String Id="InstallScopeDlgDescription" Overridable="yes">Choose the installation scope</String>
+    <String Id="InstallScopeDlgPerMachineDescription" Overridable="yes">[ProductName] will be installed in a per-machine folder and be available for all users. You must have local Administrator privileges.</String>
+</WixLocalization>

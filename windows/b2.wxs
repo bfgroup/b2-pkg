@@ -3,7 +3,7 @@
 	<Product
 		Name='B2'
 		Manufacturer='Build Frameworks Group'
-		Id='50E15E5A-6B15-46D7-B0EB-48EADBC3682F' 
+		Id='*' 
 		UpgradeCode='52F31496-5396-4537-BA46-0BAF111F97BD'
 		Language='1033'
 		Codepage='1252'
@@ -11,38 +11,147 @@
 		<Package Id='*'
 			Keywords='Installer'
 			Description='B2 Installer'
-			Comments='Copyright 2020 René Ferdinand Rivera Morell'
+			Comments='Copyright 2020-2022 René Ferdinand Rivera Morell'
 			Manufacturer='BFGroup'
 			InstallerVersion='200'
 			Languages='1033'
 			Compressed='yes'
 			SummaryCodepage='1252' />
-		<Property Id="ARPHELPLINK" Value="https://boostorg.github.io/build/" />
-		<Property Id="ARPURLINFOABOUT" Value="https://boostorg.github.io/build/" />
-		<Property Id="ARPNOMODIFY" Value="1" />
+
+		<Property Id="B2_ABOUT_LINK" Value="https://www.bfgroup.xyz/b2/" />
+		<Property Id="B2_DOC_LINK" Value="https://www.bfgroup.xyz/b2/manual/release/" />
+		<Property Id="MANUFACTURER" Value="BFGroup" />
+
+		<!-- We don't allow downgrades. -->
+		<MajorUpgrade DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." />
+	
+		<!-- Default to per-user installation with the option to select otherwise. This uses the MSI
+			selectable scope feature of setting ALLUSERS=2. Which indicates to use the MSIINSTALLPERUSER
+			value (1=per-user and empty=per-machine). -->
+		<Property Id="ALLUSERS" Value="2" />
+		<Property Id="MSIINSTALLPERUSER" Value="1" />
+
+		<!-- Indicatas if we should add the b2.exe dir to the per-machine system PATH instead of the
+			per-user PATH. -->
+		<Property Id="SYSTEMPATH" Value="no" />
+
+		<!-- Default to local user install. -->
+		<Property Id="WixAppFolder" Value="WixPerUserFolder" />
+
+		<!-- Enable asking for per-user vs. per-machine in InstallScopeDlg. -->
+		<WixVariable Id="WixUISupportPerUser" Value="1" />
+		<WixVariable Id="WixUISupportPerMachine" Value="1" />
+
+		<!---==============================================================================================-->
+
+		<!-- Top banner: 493 x 58 -->
+		<Binary Id="WixUI_Bmp_Banner" SourceFile="C:\Users\grafik\Dev\b2-pkg\windows\banner_top.bmp" />
+		<!-- Background bitmap used on the welcome and completion dialogs: 493 x 312 -->
+		<Binary Id="WixUI_Bmp_Dialog" SourceFile="C:\Users\grafik\Dev\b2-pkg\windows\dialog_bkg.bmp" />
+		<!-- Something internal references this icon ID. So we have to add it. -->
+		<Binary Id="WixUI_Ico_Info" SourceFile="C:\Users\grafik\Dev\b2-pkg\windows\info.ico" />
+		<UI Id="WixUI_B2">
+			<!-- Minimal visial customization. -->
+			<TextStyle Id="WixUI_Font_Normal" FaceName="Trebuche MS" Size="10" />
+			<TextStyle Id="WixUI_Font_Bigger" FaceName="Trebuche MS" Size="14" />
+			<TextStyle Id="WixUI_Font_Title" FaceName="Trebuche MS" Size="12" Bold="yes" />
+			<TextStyle Id="WixUI_Font_Emphasized" FaceName="Trebuche MS" Size="10" Bold="yes" Italic="yes" />
+			<Property Id="DefaultUIFont" Value="WixUI_Font_Normal" />
+			
+			<!-- Set a custom mode to prevent wix from taking a different route than what we say. -->
+			<Property Id="WixUI_Mode" Value="B2" />
+
+			<!-- All the dialogs we can possibly use in our custom flow. -->
+			<DialogRef Id="ErrorDlg" />
+			<DialogRef Id="FatalError" />
+			<DialogRef Id="FilesInUse" />
+			<DialogRef Id="UserExit" />
+			<DialogRef Id="WelcomeDlg" />
+			<DialogRef Id="InstallScopeDlg" />
+			<DialogRef Id="VerifyReadyDlg" />
+
+			<!-- Welcome/start dialog. -->
+			<Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallScopeDlg">1</Publish>
+
+			<!-- Select installing for all users vs. current user only. -->
+			<Publish Dialog="InstallScopeDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg">1</Publish>
+			<Publish Dialog="InstallScopeDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg">1</Publish>
+			<!-- override default WixAppFolder of WixPerMachineFolder as standard user won't be shown the radio group to set WixAppFolder (??) -->
+			<Publish Dialog="InstallScopeDlg" Control="Next" Property="WixAppFolder" Value="WixPerUserFolder" Order="1">!(wix.WixUISupportPerUser) AND NOT Privileged</Publish>
+			<!-- Sets the permissions to install for current user vs. all users. -->
+			<Publish Dialog="InstallScopeDlg" Control="Next" Property="MSIINSTALLPERUSER" Value="1" Order="1">WixAppFolder = "WixPerUserFolder"</Publish>
+			<Publish Dialog="InstallScopeDlg" Control="Next" Property="MSIINSTALLPERUSER" Value="{}" Order="1">WixAppFolder = "WixPerMachineFolder"</Publish>
+			<!-- We set ALLUSERS here to the fixed value as the Wix/VerifyReadyDlg uses it for displaying the shiled decorated button. -->
+			<Publish Dialog="InstallScopeDlg" Control="Next" Property="ALLUSERS" Value="{}" Order="1">WixAppFolder = "WixPerUserFolder"</Publish>
+			<Publish Dialog="InstallScopeDlg" Control="Next" Property="ALLUSERS" Value="1" Order="1">WixAppFolder = "WixPerMachineFolder"</Publish>
+			<!-- Indicate to add to the user or system Path env var. -->
+			<Publish Dialog="InstallScopeDlg" Control="Next" Property="SYSTEMPATH" Value="no" Order="1">WixAppFolder = "WixPerUserFolder"</Publish>
+			<Publish Dialog="InstallScopeDlg" Control="Next" Property="SYSTEMPATH" Value="yes" Order="1">WixAppFolder = "WixPerMachineFolder"</Publish>
+
+			<!-- Confirm installation. Will proceed to install after this. -->
+			<Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="InstallScopeDlg">1</Publish>
+			<!-- At this time the install button had the shield or not as needed. Hence on exit of the dialog
+				we set ALLUSERS=2 original value to tell MSI to use the alternate property. -->
+			<Publish Dialog="VerifyReadyDlg" Control="Install" Property="ALLUSERS" Value="2" Order="1">1</Publish>
+
+			<Publish Dialog="ExitDialog" Control="Finish" Event="EndDialog" Value="Return" Order="999">1</Publish>
+		</UI>
+
 		<Media Id='1' Cabinet='b2.cab' EmbedCab='yes' />
+
 		<Directory Id='TARGETDIR' Name='SourceDir'>
-			<Directory Id='ProgramFiles64Folder' Name='PFiles'>
-				<Directory Id='BFGroup' Name='BFGroup'>
+			<Directory Id='ProgramFiles64Folder'>
+				<Directory Id='MANUFACTURERDIR' Name='BFGroup'>
 					<Directory Id='INSTALLDIR' Name='B2'>
-						<Component Id='B2' Guid='90C9A253-52CF-4CA6-B887-C8EA590F4314'>
-							<File Id='B2EXE' Name='b2.exe' DiskId='1' Source='b2.exe' KeyPath='yes' />
-							<Environment Id='B2PATH' Name='PATH' Value='[INSTALLDIR]' Permanent='no' Part='last' Action='set' System='yes' />
+						<!-- Install the b2 engine. -->
+						<Component Id='B2Program' Guid='90C9A253-52CF-4CA6-B887-C8EA590F4314'>
+							<CreateFolder />
+							<File Id='B2Exe' Name='b2.exe' DiskId='1' Source='b2.exe' KeyPath='yes' />
+						</Component>
+						<!-- Adds to the PATH so that users can run the B2 engine by default. -->
+						<Component Id='B2EnvPerMachine' Guid='D0BC9058-FD7C-4F15-84A1-56E6D9A1AC75'>
+							<CreateFolder />
+							<Condition>SYSTEMPATH = "yes"</Condition>
+							<Environment Id='B2PathPerMachine' Name='Path' Value='[INSTALLDIR]' Permanent='no' Part='last' Action='set' System='yes' />
+						</Component>
+						<Component Id='B2EnvPerUser' Guid='D8B42AA7-4F5A-436E-AF50-36075AAF6D1E'>
+							<CreateFolder />
+							<Condition>SYSTEMPATH = "no"</Condition>
+							<Environment Id='B2PathPerUser' Name='Path' Value='[INSTALLDIR]' Permanent='no' Part='last' Action='set' System='no' />
 						</Component>
 					</Directory>
 				</Directory>
 			</Directory>
-			<Directory Id="ProgramMenuFolder" Name="Programs" />
-			<Directory Id="DesktopFolder" Name="Desktop" />
+			<!-- Define the start menu application folder. -->
+			<Directory Id="ProgramMenuFolder">
+				<Directory Id="ApplicationProgramsFolder" Name="B2">
+					<Component Id="B2StartupMenu" Guid="85385C1B-3712-436C-8089-717D0B327BE3">
+						<!-- Shortcuts to on-line documentation. -->
+						<Shortcut Id='B2AboutLink' Name="About B2" Description="More about B2." Target="[B2_ABOUT_LINK]" />
+						<Shortcut Id='B2DocLink' Name="B2 Documentation" Description="B2 on-line documentation." Target="[B2_DOC_LINK]" />
+						<!-- Shortcut to uninstall. -->
+						<Shortcut Id='B2Uninstall' Name="Uninstall B2" Description="Unistalls B2." Target="[SystemFolder]msiexec.exe" Arguments="/x [ProductCode]" />
+						<RemoveFolder Id="CleanUpStartupMenu" Directory="ApplicationProgramsFolder" On="uninstall"/>
+						<RegistryValue Root="HKCU" Key="Software\BFGroup\B2" Name="Installed" Type="integer" Value="1" KeyPath="yes"/>
+					</Component>
+				</Directory>
+			</Directory>
 		</Directory>
+
+		<!-- The one and only feature that installs everything. -->
 		<Feature Id='Complete' Level='1'>
-			<ComponentRef Id='B2' />
+			<ComponentRef Id='B2Program' />
 			<ComponentGroupRef Id='B2Files' />
+			<ComponentRef Id="B2StartupMenu" />
+			<ComponentRef Id='B2EnvPerUser' />
+			<ComponentRef Id='B2EnvPerMachine' />
 		</Feature>
+
 	</Product>
+
 </Wix>
 <!--
-Copyright 2020 René Ferdinand Rivera Morell
+Copyright 2020-2022 René Ferdinand Rivera Morell
 Distributed under the Boost Software License, Version 1.0.
 (See accompanying file LICENSE.txt or http://www.boost.org/LICENSE_1_0.txt)
 -->
