@@ -146,5 +146,10 @@ make b2-$(B2VERSION).msi
 		<dependency>banner_top.bmp
 		<dependency>dialog_bkg.bmp
 		<dependency>b2_en-us.wxl
-		<location>.
+	;
+
+install b2-stage
+	:	b2-$(B2VERSION).msi
+	:
+	:	<location>$(STAGE)
 	;

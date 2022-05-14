@@ -7,3 +7,6 @@ Distributed under the Boost Software License, Version 1.0.
 project b2-pkg
 	: build-dir .build
 	;
+
+path-constant ROOT : . ;
+path-constant STAGE : stage ;
