@@ -10,6 +10,7 @@ import modules ;
 import os ;
 import path ;
 import stage ;
+import regex ;
 
 project
 	: requirements
@@ -60,7 +61,7 @@ actions wix.compile
 	"$(CANDLE)" -nologo -arch x64 -o "$(<)" "$(>)" "-d$(DEFINE)"
 }
 
-feature.feature wix-binder-path : : free path ;
+feature.feature wix-binder-path : : free ;
 
 rule wix.link ( target * : source * : properties * )
 {
@@ -73,7 +74,16 @@ rule wix.link ( target * : source * : properties * )
 	local binder-paths = [ feature.get-values <wix-binder-path> : $(properties) ] ;
 	for local path in $(binder-paths)
 	{
-		BINDER_PATH on $(target) += [ path.native $(path) ] ;
+		local bindpath = [ regex.split $(path) "=" ] ;
+		if $(bindpath[2])
+		{
+			bindpath = $(bindpath[1]) [ path.native $(bindpath[2]) ] ;
+		}
+		else
+		{
+			bindpath = [ path.native $(bindpath[1]) ] ;
+		}
+		BINDER_PATH on $(target) += $(bindpath:J==) ;
 	}
 	FLAGS on $(target) = [ feature.get-values <flags> : $(properties) ] ;
 }
@@ -129,10 +139,12 @@ make b2-$(B2VERSION).msi
 	:	@wix.link
 	:	<wix-binder-path>$(BUILDDIR)/b2_exe
 		<wix-binder-path>$(BUILDDIR)/b2_files
+		<wix-binder-path>here=$(HERE)
 		<flags>"-ext WixUIExtension"
 		<flags>"-cultures:en-us"
 		<flags>"-loc \"$(HERE)/b2_en-us.wxl\""
 		<dependency>banner_top.bmp
 		<dependency>dialog_bkg.bmp
 		<dependency>b2_en-us.wxl
+		<location>.
 	;

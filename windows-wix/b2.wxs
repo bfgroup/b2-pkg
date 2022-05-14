@@ -45,11 +45,11 @@
 		<!---==============================================================================================-->
 
 		<!-- Top banner: 493 x 58 -->
-		<Binary Id="WixUI_Bmp_Banner" SourceFile="C:\Users\grafik\Dev\b2-pkg\windows\banner_top.bmp" />
+		<Binary Id="WixUI_Bmp_Banner" SourceFile="!(bindpath.here)banner_top.bmp" />
 		<!-- Background bitmap used on the welcome and completion dialogs: 493 x 312 -->
-		<Binary Id="WixUI_Bmp_Dialog" SourceFile="C:\Users\grafik\Dev\b2-pkg\windows\dialog_bkg.bmp" />
+		<Binary Id="WixUI_Bmp_Dialog" SourceFile="!(bindpath.here)dialog_bkg.bmp" />
 		<!-- Something internal references this icon ID. So we have to add it. -->
-		<Binary Id="WixUI_Ico_Info" SourceFile="C:\Users\grafik\Dev\b2-pkg\windows\info.ico" />
+		<Binary Id="WixUI_Ico_Info" SourceFile="!(bindpath.here)info.ico" />
 		<UI Id="WixUI_B2">
 			<!-- Minimal visial customization. -->
 			<TextStyle Id="WixUI_Font_Normal" FaceName="Trebuche MS" Size="10" />
