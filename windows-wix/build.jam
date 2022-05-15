@@ -100,8 +100,7 @@ B2VERSION = [ MATCH "MAJOR ([0-9]+)" "MINOR ([0-9]+)" "PATCH ([0-9]+)" : $(B2VER
 B2VERSION = $(B2VERSION:J=.) ;
 
 path-constant HERE : . ;
-
-path-constant BUILDDIR : ../.build/windows/stage ;
+path-constant BUILDDIR : $(HERE)/../.build/$(HERE:B)/stage ;
 
 use-project /b2 : $(B2ROOT) ;
 
