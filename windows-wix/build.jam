@@ -93,6 +93,13 @@ actions wix.link
 	"$(LIGHT)" -nologo $(FLAGS) -b$(_)"$(BINDER_PATH)" -o "$(<)" "$(>)"
 }
 
+# Hash gen.
+
+actions sha256sum
+{
+	CertUtil -hashfile "$(>)" SHA256 | findstr /v "hash" > "$(<)"
+}
+
 # Build and pseudo install fresh B2 package to package up.
 
 local B2VERSION = [ FILE_OPEN $(B2ROOT)/src/engine/patchlevel.h : t ] ;
@@ -147,8 +154,14 @@ make b2-$(B2VERSION).msi
 		<dependency>b2_en-us.wxl
 	;
 
+make b2-$(B2VERSION).msi.sha256sum.txt
+	:	b2-$(B2VERSION).msi
+	:	@sha256sum
+	;
+
 install b2-stage
 	:	b2-$(B2VERSION).msi
+		b2-$(B2VERSION).msi.sha256sum.txt
 	:
 	:	<location>$(STAGE)
 	;
